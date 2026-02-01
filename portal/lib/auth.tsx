@@ -22,6 +22,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
+  loginWithOAuth: (provider: 'github' | 'google') => Promise<void>;
   logout: () => void;
   refreshToken: () => Promise<boolean>;
 }
@@ -89,6 +90,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
   };
 
+  const loginWithOAuth = async (provider: 'github' | 'google') => {
+    // TODO: Implement OAuth flow once backend endpoints are ready
+    // For now, show alert and redirect to login page
+    alert(`${provider} OAuth is not yet implemented. Please use email/password for now.`);
+    
+    // Example of what the OAuth flow would look like:
+    // const response = await api.get(`/auth/oauth/${provider}/redirect`);
+    // window.location.href = response.data.redirect_url;
+  };
+
   const logout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -119,7 +130,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshToken }}>
+    <AuthContext.Provider value={{ user, loading, login, register, loginWithOAuth, logout, refreshToken }}>
       {children}
     </AuthContext.Provider>
   );
