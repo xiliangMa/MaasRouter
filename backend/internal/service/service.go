@@ -21,9 +21,10 @@ type UserService interface {
 	GetProfile(ctx context.Context, userID string) (*UserProfile, error)
 	UpdateProfile(ctx context.Context, userID string, req *UpdateProfileRequest) error
 	ChangePassword(ctx context.Context, userID, oldPassword, newPassword string) error
-	ListAPIKeys(ctx context.Context, userID string) ([]*model.UserAPIKey, error)
-	CreateAPIKey(ctx context.Context, userID string, req *CreateAPIKeyRequest) (*model.UserAPIKey, error)
+	ListAPIKeys(ctx context.Context, userID string) ([]*APIKeyResponse, error)
+	CreateAPIKey(ctx context.Context, userID string, req *CreateAPIKeyRequest) (*APIKeyResponse, error)
 	DeleteAPIKey(ctx context.Context, userID, keyID string) error
+	RotateAPIKey(ctx context.Context, userID, keyID string, req *RotateAPIKeyRequest) (*APIKeyResponse, error)
 	GetUserBalance(ctx context.Context, userID string) (*UserBalance, error)
 	GetUsageStatistics(ctx context.Context, userID string, startDate, endDate *time.Time) (*UsageStatistics, error)
 }
@@ -112,10 +113,17 @@ type UpdateProfileRequest struct {
 }
 
 type CreateAPIKeyRequest struct {
-	Name        string   `json:"name" validate:"required,min=1,max=255"`
-	Permissions []string `json:"permissions" validate:"required,min=1"`
-	RateLimit   int      `json:"rate_limit" validate:"required,min=1,max=10000"`
-	ExpiresIn   int      `json:"expires_in" validate:"omitempty,min=3600"` // seconds
+	Name          string               `json:"name" validate:"required,min=1,max=255"`
+	Permissions   []string             `json:"permissions,omitempty" validate:"omitempty"` // Legacy format
+	PermissionSet *model.PermissionSet `json:"permission_set,omitempty"`
+	RateLimit     int                  `json:"rate_limit" validate:"required,min=1,max=10000"`
+	ExpiresIn     int                  `json:"expires_in" validate:"omitempty,min=3600"` // seconds
+}
+
+type RotateAPIKeyRequest struct {
+	Reason        string `json:"reason,omitempty"`
+	KeepOldActive bool   `json:"keep_old_active,omitempty"`                          // Whether to keep old key active during grace period
+	ExpiresIn     int    `json:"expires_in,omitempty" validate:"omitempty,min=3600"` // seconds, optional override
 }
 
 type UserProfile struct {
@@ -479,4 +487,25 @@ type OAuthLoginResponse struct {
 	RefreshToken string      `json:"refresh_token"`
 	ExpiresIn    int64       `json:"expires_in"`
 	IsNewUser    bool        `json:"is_new_user"`
+}
+
+// APIKeyResponse is the response structure for API keys that maintains backward compatibility
+type APIKeyResponse struct {
+	ID          string     `json:"id"`
+	UserID      string     `json:"user_id"`
+	Name        string     `json:"name"`
+	APIKey      string     `json:"api_key,omitempty"`
+	Prefix      string     `json:"prefix"`
+	Permissions []string   `json:"permissions"` // Legacy format for backward compatibility
+	RateLimit   int        `json:"rate_limit"`
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+	LastUsedAt  *time.Time `json:"last_used_at,omitempty"`
+	IsActive    bool       `json:"is_active"`
+	CreatedAt   time.Time  `json:"created_at"`
+
+	// Rotation fields
+	ParentKeyID    *string    `json:"parent_key_id,omitempty"`
+	Version        int        `json:"version"`
+	RotationReason *string    `json:"rotation_reason,omitempty"`
+	RotatedAt      *time.Time `json:"rotated_at,omitempty"`
 }

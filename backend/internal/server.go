@@ -168,6 +168,7 @@ func (s *Server) setupRouter() {
 				userGroup.GET("/api-keys", s.userController.ListAPIKeys)
 				userGroup.POST("/api-keys", s.userController.CreateAPIKey)
 				userGroup.DELETE("/api-keys/:id", s.userController.DeleteAPIKey)
+				userGroup.POST("/api-keys/:id/rotate", s.userController.RotateAPIKey)
 				userGroup.GET("/balance", s.userController.GetBalance)
 				userGroup.GET("/usage", s.userController.GetUsageStatistics)
 			}
@@ -223,6 +224,15 @@ func (s *Server) setupRouter() {
 		adminGroup.GET("/stats", s.adminController.GetSystemStats)
 		adminGroup.PUT("/config/:key", s.adminController.UpdateSystemConfig)
 	}
+
+	// Debug route to test routing
+	s.router.GET("/debug/routes", func(c *gin.Context) {
+		routes := s.router.Routes()
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data":    routes,
+		})
+	})
 
 	s.router.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{

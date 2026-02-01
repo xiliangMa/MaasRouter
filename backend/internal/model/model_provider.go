@@ -53,6 +53,12 @@ type UserAPIKey struct {
 	CreatedAt   time.Time  `gorm:"not null" json:"created_at"`
 	UpdatedAt   time.Time  `gorm:"not null" json:"updated_at"`
 
+	// Rotation fields
+	ParentKeyID    *string    `gorm:"type:uuid;index" json:"parent_key_id,omitempty"`
+	Version        int        `gorm:"not null;default:1" json:"version"`
+	RotationReason *string    `gorm:"type:text" json:"rotation_reason,omitempty"`
+	RotatedAt      *time.Time `json:"rotated_at,omitempty"`
+
 	User           User            `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	BillingRecords []BillingRecord `gorm:"foreignKey:APIKeyID" json:"billing_records,omitempty"`
 }

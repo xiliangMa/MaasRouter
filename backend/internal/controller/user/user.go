@@ -345,9 +345,10 @@ func (c *Controller) CreateAPIKey(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, gin.H{
 		"success": true,
 		"data": gin.H{
-			"api_key": key,
-			"message": "API key created successfully. Save this key now as it won't be shown again.",
-			"warning": "For security reasons, the full API key will only be shown once.",
+			"api_key":  key.APIKey, // The actual API key string
+			"key_info": key,        // The full key information
+			"message":  "API key created successfully. Save this key now as it won't be shown again.",
+			"warning":  "For security reasons, the full API key will only be shown once.",
 		},
 	})
 }
@@ -418,6 +419,108 @@ func (c *Controller) DeleteAPIKey(ctx *gin.Context) {
 		"success": true,
 		"data": gin.H{
 			"message": "API key deleted successfully",
+		},
+	})
+}
+
+// RotateAPIKey godoc
+// @Summary Rotate API key
+// @Description Rotate an existing API key by creating a new version and optionally deactivating the old one
+// @Tags user
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "API key ID"
+// @Param request body service.RotateAPIKeyRequest true "Rotation request"
+// @Success 201 {object} map[string]interface{} "API key rotated successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request - invalid input"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden - unauthorized to rotate this key"
+// @Failure 404 {object} map[string]interface{} "API key not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /api/v1/user/api-keys/{id}/rotate [post]
+func (c *Controller) RotateAPIKey(ctx *gin.Context) {
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    "ERR_UNAUTHORIZED",
+				"message": "Authentication required",
+			},
+		})
+		return
+	}
+
+	keyID := ctx.Param("id")
+	if keyID == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    "ERR_BAD_REQUEST",
+				"message": "API key ID is required",
+			},
+		})
+		return
+	}
+
+	var req service.RotateAPIKeyRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    "ERR_BAD_REQUEST",
+				"message": "Invalid request body",
+				"details": err.Error(),
+			},
+		})
+		return
+	}
+
+	// Validate request if needed
+	if err := c.validator.Struct(req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    "ERR_VALIDATION",
+				"message": "Validation failed",
+				"details": err.Error(),
+			},
+		})
+		return
+	}
+
+	newKey, err := c.userService.RotateAPIKey(ctx.Request.Context(), userID.(string), keyID, &req)
+	if err != nil {
+		status := http.StatusInternalServerError
+		errorCode := "ERR_INTERNAL"
+
+		switch err.Error() {
+		case "API key not found":
+			status = http.StatusNotFound
+			errorCode = "ERR_KEY_NOT_FOUND"
+		case "unauthorized to rotate this API key":
+			status = http.StatusForbidden
+			errorCode = "ERR_UNAUTHORIZED"
+		}
+
+		ctx.JSON(status, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    errorCode,
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, gin.H{
+		"success": true,
+		"data": gin.H{
+			"api_key":  newKey.APIKey, // The actual API key string
+			"key_info": newKey,        // The full key information
+			"message":  "API key rotated successfully. Save this key now as it won't be shown again.",
+			"warning":  "For security reasons, the full API key will only be shown once.",
 		},
 	})
 }
