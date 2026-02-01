@@ -132,21 +132,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 bg-primary text-primary-foreground">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-6">Ready to Get Started?</h2>
-          <p className="text-xl mb-10 opacity-90">
-            Join thousands of developers building with the most comprehensive AI platform.
-          </p>
-          <div className="flex gap-4 justify-center">
-            <Button size="lg" variant="secondary">Sign Up Free</Button>
-            <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white/10">
-              Contact Sales
-            </Button>
-          </div>
-        </div>
-      </section>
+
 
     </>
   )
